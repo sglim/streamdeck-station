@@ -1,6 +1,8 @@
 import { action, DidReceiveSettingsEvent, KeyDownEvent, SingletonAction, WillAppearEvent } from "@elgato/streamdeck";
+import streamDeck from "@elgato/streamdeck";
 import { itermSendText, itermSendKeystroke } from "../utils/iterm";
 import { claudeState, type ClaudeState } from "../utils/state";
+import { getSendIcon, STOP_PROCESSING_ICON } from "../utils/icons";
 
 type SendMode = "text" | "ctrl-c";
 
@@ -9,27 +11,28 @@ type SendToITermSettings = {
   text?: string;
 };
 
-function getIconForSettings(settings: SendToITermSettings): string {
-  if (settings.mode === "ctrl-c") return "imgs/actions/send/key/stop";
-  const text = settings.text ?? "";
-  if (text === "y" || text === "yes") return "imgs/actions/send/key/yes";
-  if (text.startsWith("/commit")) return "imgs/actions/send/key/commit";
-  return "imgs/actions/send/key/text";
-}
-
 @action({ UUID: "com.sglim.claude-machine.send-to-iterm" })
 export class SendToITerm extends SingletonAction<SendToITermSettings> {
   private stateListener: ((change: { current: ClaudeState }) => void) | null = null;
 
   override async onWillAppear(ev: WillAppearEvent<SendToITermSettings>): Promise<void> {
-    const icon = getIconForSettings(ev.payload.settings);
-    await ev.action.setImage(icon);
+    const { mode = "text", text = "" } = ev.payload.settings;
+    streamDeck.logger.info(`send-to-iterm onWillAppear: mode=${mode} text=${text}`);
+    const icon = getSendIcon(mode, text);
+    if (icon) {
+      await ev.action.setImage(icon);
+    }
 
-    // STOP 버튼은 Claude 상태에 따라 동적 타이틀 변경
-    if (ev.payload.settings.mode === "ctrl-c") {
+    if (mode === "ctrl-c") {
+      const stopIcon = getSendIcon("ctrl-c", "");
       this.stateListener = ({ current }) => {
-        const title = current === "processing" ? "⏳ STOP" : "STOP";
-        ev.action.setTitle(title);
+        if (current === "processing") {
+          ev.action.setImage(STOP_PROCESSING_ICON);
+          ev.action.setTitle("⏳ STOP");
+        } else {
+          ev.action.setImage(stopIcon);
+          ev.action.setTitle("STOP");
+        }
       };
       claudeState.on("stateChange", this.stateListener);
     }
@@ -43,8 +46,11 @@ export class SendToITerm extends SingletonAction<SendToITermSettings> {
   }
 
   override async onDidReceiveSettings(ev: DidReceiveSettingsEvent<SendToITermSettings>): Promise<void> {
-    const icon = getIconForSettings(ev.payload.settings);
-    await ev.action.setImage(icon);
+    const { mode = "text", text = "" } = ev.payload.settings;
+    const icon = getSendIcon(mode, text);
+    if (icon) {
+      await ev.action.setImage(icon);
+    }
   }
 
   override async onKeyDown(ev: KeyDownEvent<SendToITermSettings>): Promise<void> {
