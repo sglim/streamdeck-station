@@ -1,12 +1,11 @@
 import streamDeck from "@elgato/streamdeck";
 
-import { IncrementCounter } from "./actions/increment-counter";
+import { ITermNavigate } from "./actions/iterm-navigate";
+import { SendToITerm } from "./actions/send-to-iterm";
 
-// We can enable "trace" logging so that all messages between the Stream Deck, and the plugin are recorded. When storing sensitive information
 streamDeck.logger.setLevel("trace");
 
-// Register the increment action.
-streamDeck.actions.registerAction(new IncrementCounter());
+streamDeck.actions.registerAction(new ITermNavigate());
+streamDeck.actions.registerAction(new SendToITerm());
 
-// Finally, connect to the Stream Deck.
 streamDeck.connect();

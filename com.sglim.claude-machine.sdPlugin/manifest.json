@@ -1,47 +1,55 @@
 {
-	"Name": "Claude Machine",
-	"Version": "0.1.0.0",
-	"Author": "sglim",
-	"Actions": [
-		{
-			"Name": "Counter",
-			"UUID": "com.sglim.claude-machine.increment",
-			"Icon": "imgs/actions/counter/icon",
-			"Tooltip": "Displays a count, which increments by one on press.",
-			"PropertyInspectorPath": "ui/increment-counter.html",
-			"Controllers": [
-				"Keypad"
-			],
-			"States": [
-				{
-					"Image": "imgs/actions/counter/key",
-					"TitleAlignment": "middle"
-				}
-			]
-		}
-	],
-	"Category": "Claude Machine",
-	"CategoryIcon": "imgs/plugin/category-icon",
-	"CodePath": "bin/plugin.js",
-	"Description": "Claude Code + iTerm2 control plugin",
-	"Icon": "imgs/plugin/marketplace",
-	"SDKVersion": 3,
-	"Software": {
-		"MinimumVersion": "6.9"
-	},
-	"OS": [
-		{
-			"Platform": "mac",
-			"MinimumVersion": "12"
-		},
-		{
-			"Platform": "windows",
-			"MinimumVersion": "10"
-		}
-	],
-	"Nodejs": {
-		"Version": "20",
-		"Debug": "enabled"
-	},
-	"UUID": "com.sglim.claude-machine"
+  "Name": "Claude Machine",
+  "Version": "0.1.0.0",
+  "Author": "sglim",
+  "Actions": [
+    {
+      "Name": "iTerm Navigate",
+      "UUID": "com.sglim.claude-machine.iterm-navigate",
+      "Icon": "imgs/actions/counter/icon",
+      "Tooltip": "iTerm2 탭/패널 이동 및 분할",
+      "PropertyInspectorPath": "ui/iterm-navigate.html",
+      "Controllers": ["Keypad"],
+      "States": [
+        {
+          "Image": "imgs/actions/counter/key",
+          "TitleAlignment": "middle"
+        }
+      ]
+    },
+    {
+      "Name": "Send to iTerm",
+      "UUID": "com.sglim.claude-machine.send-to-iterm",
+      "Icon": "imgs/actions/counter/icon",
+      "Tooltip": "iTerm2 현재 세션에 텍스트/명령 전송",
+      "PropertyInspectorPath": "ui/send-to-iterm.html",
+      "Controllers": ["Keypad"],
+      "States": [
+        {
+          "Image": "imgs/actions/counter/key",
+          "TitleAlignment": "middle"
+        }
+      ]
+    }
+  ],
+  "Category": "Claude Machine",
+  "CategoryIcon": "imgs/plugin/category-icon",
+  "CodePath": "bin/plugin.js",
+  "Description": "Claude Code + iTerm2 제어 플러그인",
+  "Icon": "imgs/plugin/marketplace",
+  "SDKVersion": 3,
+  "Software": {
+    "MinimumVersion": "6.9"
+  },
+  "OS": [
+    {
+      "Platform": "mac",
+      "MinimumVersion": "12"
+    }
+  ],
+  "Nodejs": {
+    "Version": "20",
+    "Debug": "enabled"
+  },
+  "UUID": "com.sglim.claude-machine"
 }
