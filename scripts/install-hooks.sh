@@ -19,7 +19,7 @@ jq '
     "matcher": "*",
     "hooks": [{
       "type": "command",
-      "command": "#!/bin/bash\ninput=$(cat)\necho \"$input\" | curl -s -X POST http://127.0.0.1:19475/hook/PreToolUse -H \"Content-Type: application/json\" -d @- 2>/dev/null || true\necho \"$input\""
+      "command": "#!/bin/bash\ninput=$(cat)\nprintf '"'"'%s'"'"' \"$input\" | curl -s -X POST http://127.0.0.1:19475/hook/PreToolUse -H \"Content-Type: application/json\" -d @- 2>/dev/null || true\nprintf '"'"'%s'"'"' \"$input\""
     }]
   }] |
 
@@ -28,7 +28,7 @@ jq '
     "matcher": "*",
     "hooks": [{
       "type": "command",
-      "command": "#!/bin/bash\ninput=$(cat)\necho \"$input\" | curl -s -X POST http://127.0.0.1:19475/hook/PostToolUse -H \"Content-Type: application/json\" -d @- 2>/dev/null || true\necho \"$input\""
+      "command": "#!/bin/bash\ninput=$(cat)\nprintf '"'"'%s'"'"' \"$input\" | curl -s -X POST http://127.0.0.1:19475/hook/PostToolUse -H \"Content-Type: application/json\" -d @- 2>/dev/null || true\nprintf '"'"'%s'"'"' \"$input\""
     }]
   }] |
 
@@ -37,7 +37,7 @@ jq '
     "matcher": "*",
     "hooks": [{
       "type": "command",
-      "command": "#!/bin/bash\ninput=$(cat)\necho \"$input\" | curl -s -X POST http://127.0.0.1:19475/hook/Stop -H \"Content-Type: application/json\" -d @- 2>/dev/null || true\necho \"$input\""
+      "command": "#!/bin/bash\ninput=$(cat)\nprintf '"'"'%s'"'"' \"$input\" | curl -s -X POST http://127.0.0.1:19475/hook/Stop -H \"Content-Type: application/json\" -d @- 2>/dev/null || true\nprintf '"'"'%s'"'"' \"$input\""
     }]
   }]
 ' "$SETTINGS" > "$TEMP"
