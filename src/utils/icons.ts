@@ -56,11 +56,18 @@ export function getSendIcon(mode: string, text: string): string {
   return SEND_ICONS["text"] ?? "";
 }
 
-// processing 상태용 STOP 아이콘 (주황색 배경 + 흰색 정지)
-const STOP_PROCESSING_SVG = `<svg viewBox="0 0 144 144" xmlns="http://www.w3.org/2000/svg">
+function svgToDataUri(svg: string): string {
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+}
+
+// thinking 상태 (Brewing) — 보라색 배경 + 뇌 아이콘
+export const STOP_THINKING_ICON = svgToDataUri(`<svg viewBox="0 0 144 144" xmlns="http://www.w3.org/2000/svg">
+  <rect width="144" height="144" rx="20" fill="#6a1b9a"/>
+  <text x="72" y="88" text-anchor="middle" font-size="64" fill="#fff">🧠</text>
+</svg>`);
+
+// processing 상태 (Tool 사용중) — 주황색 배경 + 정지 버튼
+export const STOP_PROCESSING_ICON = svgToDataUri(`<svg viewBox="0 0 144 144" xmlns="http://www.w3.org/2000/svg">
   <rect width="144" height="144" rx="20" fill="#ff6d00"/>
   <rect x="40" y="40" width="64" height="64" rx="8" fill="#fff"/>
-  <text x="72" y="130" text-anchor="middle" font-size="16" font-family="sans-serif" fill="#fff">Processing</text>
-</svg>`;
-
-export const STOP_PROCESSING_ICON = `data:image/svg+xml;base64,${Buffer.from(STOP_PROCESSING_SVG).toString("base64")}`;
+</svg>`);

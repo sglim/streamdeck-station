@@ -3,8 +3,8 @@ import { EventEmitter } from "node:events";
 export type ClaudeState =
   | "disconnected"
   | "idle"
+  | "thinking"
   | "processing"
-  | "awaiting_permission"
   | "stopped";
 
 export interface HookEvent {
@@ -49,18 +49,21 @@ class ClaudeStateManager extends EventEmitter {
     this._lastEvent = event;
 
     switch (eventType) {
+      case "UserPromptSubmit":
+        this._toolName = null;
+        this.setState("thinking");
+        break;
       case "PreToolUse":
         this._toolName = event.tool ?? null;
         this.setState("processing");
         break;
       case "PostToolUse":
         this._toolName = null;
-        this.setState("idle");
+        this.setState("thinking");
         break;
       case "Stop":
         this._toolName = null;
         this.setState("stopped");
-        // 3초 후 idle로 전환
         setTimeout(() => {
           if (this._state === "stopped") {
             this.setState("idle");
@@ -69,9 +72,6 @@ class ClaudeStateManager extends EventEmitter {
         break;
       case "Notification":
         this.emit("notification", data);
-        break;
-      case "UserPromptSubmit":
-        this.setState("processing");
         break;
       default:
         break;

@@ -2,7 +2,7 @@ import { action, DidReceiveSettingsEvent, KeyDownEvent, SingletonAction, WillApp
 import streamDeck from "@elgato/streamdeck";
 import { itermSendText, itermSendKeystroke } from "../utils/iterm";
 import { claudeState, type ClaudeState } from "../utils/state";
-import { getSendIcon, STOP_PROCESSING_ICON } from "../utils/icons";
+import { getSendIcon, STOP_PROCESSING_ICON, STOP_THINKING_ICON } from "../utils/icons";
 
 type SendMode = "text" | "ctrl-c";
 
@@ -26,9 +26,13 @@ export class SendToITerm extends SingletonAction<SendToITermSettings> {
     if (mode === "ctrl-c") {
       const stopIcon = getSendIcon("ctrl-c", "");
       this.stateListener = ({ current }) => {
-        if (current === "processing") {
+        if (current === "thinking") {
+          ev.action.setImage(STOP_THINKING_ICON);
+          ev.action.setTitle("Brewing...");
+        } else if (current === "processing") {
           ev.action.setImage(STOP_PROCESSING_ICON);
-          ev.action.setTitle("⏳ STOP");
+          const tool = claudeState.toolName;
+          ev.action.setTitle(tool ? `⏳ ${tool}` : "⏳ STOP");
         } else {
           ev.action.setImage(stopIcon);
           ev.action.setTitle("STOP");
