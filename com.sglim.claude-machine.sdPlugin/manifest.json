@@ -1,33 +1,33 @@
 {
   "Name": "Claude Machine",
-  "Version": "0.1.0.0",
+  "Version": "0.2.0.0",
   "Author": "sglim",
   "Actions": [
     {
       "Name": "iTerm Navigate",
       "UUID": "com.sglim.claude-machine.iterm-navigate",
-      "Icon": "imgs/actions/counter/icon",
+      "Icon": "imgs/actions/iterm/icon",
       "Tooltip": "iTerm2 탭/패널 이동 및 분할",
       "PropertyInspectorPath": "ui/iterm-navigate.html",
       "Controllers": ["Keypad"],
       "States": [
         {
-          "Image": "imgs/actions/counter/key",
-          "TitleAlignment": "middle"
+          "Image": "imgs/actions/iterm/key",
+          "TitleAlignment": "bottom"
         }
       ]
     },
     {
       "Name": "Send to iTerm",
       "UUID": "com.sglim.claude-machine.send-to-iterm",
-      "Icon": "imgs/actions/counter/icon",
-      "Tooltip": "iTerm2 현재 세션에 텍스트/명령 전송",
+      "Icon": "imgs/actions/send/icon",
+      "Tooltip": "iTerm2 현재 세션에 텍스트/명령 전송 (Claude Code Hook 연동)",
       "PropertyInspectorPath": "ui/send-to-iterm.html",
       "Controllers": ["Keypad"],
       "States": [
         {
-          "Image": "imgs/actions/counter/key",
-          "TitleAlignment": "middle"
+          "Image": "imgs/actions/send/key",
+          "TitleAlignment": "bottom"
         }
       ]
     }
