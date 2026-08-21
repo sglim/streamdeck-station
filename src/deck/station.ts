@@ -29,6 +29,8 @@ export class Station {
   private deck: StreamDeck | null = null
   private stack: Page[] = []
   private lastDrawn = new Map<number, string>()
+  /** 마지막으로 그린 스펙. 버튼을 누른 즉시 로딩 표시를 겹쳐 그리는 데 쓴다. */
+  private lastSpec = new Map<number, ButtonSpec | null>()
   private refreshTimer: NodeJS.Timeout | null = null
   private renderPending = false
   private rendering = false
@@ -84,8 +86,10 @@ export class Station {
   private async handleDown(index: number): Promise<void> {
     const page = this.current
     if (!page) return
-    // 눌린 즉시 시각 피드백을 준 뒤 핸들러를 실행한다
-    void this.flash(index)
+    // 눌린 즉시 현재 버튼 위에 로딩 표시를 겹쳐 그린 뒤 핸들러를 실행한다.
+    // HA 같은 클라우드 왕복이 있는 동작은 수백 ms가 걸려, 아무 표시가 없으면
+    // 흰 화면처럼 보이는 렌더 지연과 헷갈린다.
+    void this.paintBusy(index)
     try {
       await page.onPress?.(index)
     } catch (err) {
@@ -94,11 +98,17 @@ export class Station {
     this.requestDraw()
   }
 
-  private async flash(index: number): Promise<void> {
+  private async paintBusy(index: number): Promise<void> {
     const deck = this.deck
     if (!deck) return
+    const spec = this.lastSpec.get(index) ?? null
     try {
-      await deck.fillKeyColor(index, 255, 255, 255)
+      if (spec) {
+        await deck.fillKeyBuffer(index, await renderButton({ ...spec, busy: true }), { format: 'rgba' })
+      } else {
+        await deck.fillKeyColor(index, 40, 34, 10)
+      }
+      // 실제 결과가 나오면 신호가 같더라도 반드시 다시 그리도록 무효화한다
       this.lastDrawn.delete(index)
     } catch { /* 렌더 중 장치가 빠진 경우 */ }
   }
@@ -179,6 +189,7 @@ export class Station {
           await deck.fillKeyColor(i, 0, 0, 0)
         }
         this.lastDrawn.set(i, sig)
+        this.lastSpec.set(i, spec)
       }
     } catch (err) {
       console.error(`[${page.id}] 렌더 실패:`, (err as Error).message)

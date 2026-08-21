@@ -24,6 +24,8 @@ export interface ButtonSpec {
   pressed?: boolean
   /** 비활성(흐리게) */
   dim?: boolean
+  /** 명령을 보내고 결과를 기다리는 중 (상단에 로딩 점 표시) */
+  busy?: boolean
 }
 
 export const COLORS = {
@@ -136,6 +138,13 @@ function buildSvg(spec: ButtonSpec): string {
     const w = Math.max(0, Math.min(1, spec.gauge)) * 56
     parts.push(`<rect x="8" y="63" width="56" height="4" rx="2" fill="#2a2d3a"/>`)
     if (w > 0) parts.push(`<rect x="8" y="63" width="${w.toFixed(1)}" height="4" rx="2" fill="${spec.accent ?? COLORS.blue}"/>`)
+  }
+
+  if (spec.busy) {
+    // 명령 응답을 기다리는 동안 우상단에 점 3개. 흰 화면 대신 이걸 보여준다.
+    for (let i = 0; i < 3; i++) {
+      parts.push(`<circle cx="${52 + i * 7}" cy="10" r="2" fill="${COLORS.amber}"/>`)
+    }
   }
 
   return `<svg width="72" height="72" xmlns="http://www.w3.org/2000/svg">${parts.join('')}</svg>`
