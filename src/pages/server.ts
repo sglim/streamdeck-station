@@ -1,7 +1,7 @@
 import type { Page, Layout } from '../deck/station.js'
 import { COLORS } from '../deck/render.js'
 import {
-  readSystemStats, readContainers, restartContainer, formatUptime,
+  readSystemStats, readContainers, restartContainer, formatUptime, readCpuTemp,
   type SystemStats, type Container,
 } from '../integrations/system.js'
 import { emptyLayout, homeButton, type AppContext } from './context.js'
@@ -80,6 +80,16 @@ export class ServerPage implements Page {
       }
       layout[3] = { icon: 'clock', label: '가동', sub: formatUptime(s.uptimeSec) }
     }
+
+    const temp = readCpuTemp()
+    layout[4] = temp !== null
+      ? {
+          value: `${Math.round(temp)}°`,
+          label: 'CPU 온도',
+          gauge: temp / 100,
+          accent: temp > 85 ? COLORS.red : temp > 70 ? COLORS.amber : COLORS.green,
+        }
+      : { icon: 'cpu', label: '온도', sub: '측정 중', dim: true }
 
     this.containers.forEach((c, i) => {
       const slot = 5 + i

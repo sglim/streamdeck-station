@@ -95,6 +95,32 @@ export async function restartContainer(name: string): Promise<void> {
   await run('docker', ['restart', name], 60000)
 }
 
+let tempCache: { value: number | null; at: number } = { value: null, at: 0 }
+let tempInflight = false
+const TEMP_TTL_MS = 10_000
+
+/**
+ * CPU 온도(°C). Apple Silicon 은 표준 명령이 없어 macmon 으로 읽는다.
+ * 샘플링에 1초쯤 걸리므로 렌더를 막지 않도록 백그라운드로 갱신하고
+ * 캐시를 돌려준다. macmon 이 없거나 실패하면 null.
+ */
+export function readCpuTemp(): number | null {
+  if (Date.now() - tempCache.at > TEMP_TTL_MS && !tempInflight) {
+    tempInflight = true
+    void tryRun('macmon', ['pipe', '-s', '1'], 8000)
+      .then((out) => {
+        let value: number | null = null
+        try {
+          const t = out ? JSON.parse(out.trim().split('\n')[0]!)?.temp?.cpu_temp_avg : null
+          if (typeof t === 'number' && t > 0) value = t
+        } catch { /* 출력 형식이 바뀐 경우 */ }
+        tempCache = { value, at: Date.now() }
+      })
+      .finally(() => { tempInflight = false })
+  }
+  return tempCache.value
+}
+
 /** 초를 "3일 4시간" 같은 짧은 한글 표기로 */
 export function formatUptime(sec: number): string {
   const d = Math.floor(sec / 86400)
