@@ -3,9 +3,6 @@ import { COLORS, type ButtonSpec, type IconName } from '../deck/render.js'
 import { readSystemStats, readContainers } from '../integrations/system.js'
 import { emptyLayout, navButton, resolveTrack, type AppContext } from './context.js'
 
-/** 밝기 버튼을 누를 때마다 순환하는 단계 */
-const BRIGHTNESS_STEPS = [100, 60, 30, 10]
-
 export interface HomeTargets {
   music: () => Page
   lights: () => Page
@@ -19,18 +16,13 @@ export class HomePage implements Page {
   readonly id = 'home'
   readonly refreshMs = 5000
 
-  private brightnessStep = 0
   private summary = { load: 0, mem: 0, up: 0, down: 0 }
   private activated: string | null = null
 
   constructor(
     private readonly ctx: AppContext,
     private readonly targets: HomeTargets,
-  ) {
-    const current = ctx.config.brightness
-    const idx = BRIGHTNESS_STEPS.indexOf(current)
-    this.brightnessStep = idx >= 0 ? idx : 0
-  }
+  ) {}
 
   private get favorites() {
     return this.ctx.config.hass.favorites?.slice(0, 5) ?? []
@@ -71,12 +63,7 @@ export class HomePage implements Page {
       label: '컨테이너',
       accent: this.summary.down > 0 ? COLORS.red : COLORS.green,
     }
-    layout[14] = {
-      value: `${BRIGHTNESS_STEPS[this.brightnessStep]}%`,
-      label: '밝기',
-      gauge: BRIGHTNESS_STEPS[this.brightnessStep]! / 100,
-      accent: COLORS.muted,
-    }
+    layout[14] = await this.weatherButton()
 
     return layout
   }
@@ -123,7 +110,6 @@ export class HomePage implements Page {
       case 3: return station.push(this.targets.bots())
       case 4: return station.push(this.targets.server())
       case 10: return this.allOff()
-      case 14: return this.cycleBrightness()
     }
 
     const fav = this.favorites[index - 5]
@@ -150,8 +136,42 @@ export class HomePage implements Page {
     }, 1500).unref()
   }
 
-  private async cycleBrightness(): Promise<void> {
-    this.brightnessStep = (this.brightnessStep + 1) % BRIGHTNESS_STEPS.length
-    await this.ctx.station.setBrightness(BRIGHTNESS_STEPS[this.brightnessStep]!)
+  /** 바깥 날씨: 상태별 아이콘 + 기온 */
+  private async weatherButton(): Promise<ButtonSpec> {
+    const entity = this.ctx.config.hass.weather
+    if (!entity || !this.ctx.hass.enabled) {
+      return { icon: 'cloud', label: '날씨', dim: true }
+    }
+    const state = await this.ctx.hass.get(entity)
+    if (!state || state.state === 'unavailable') {
+      return { icon: 'cloud', label: '날씨', dim: true }
+    }
+    const temp = state.attributes.temperature
+    const w = WEATHER[state.state] ?? { icon: 'cloud' as IconName, label: state.state }
+    return {
+      icon: w.icon,
+      label: typeof temp === 'number' ? `${Math.round(temp)}°` : w.label,
+      sub: typeof temp === 'number' ? w.label : undefined,
+      accent: COLORS.blue,
+    }
   }
+}
+
+/** HA weather 상태 → 아이콘·한글 이름 */
+const WEATHER: Record<string, { icon: IconName; label: string }> = {
+  'sunny': { icon: 'sun', label: '맑음' },
+  'clear-night': { icon: 'moon', label: '맑음' },
+  'partlycloudy': { icon: 'cloudSun', label: '구름 조금' },
+  'cloudy': { icon: 'cloud', label: '흐림' },
+  'rainy': { icon: 'rain', label: '비' },
+  'pouring': { icon: 'rain', label: '폭우' },
+  'lightning': { icon: 'storm', label: '뇌우' },
+  'lightning-rainy': { icon: 'storm', label: '뇌우' },
+  'snowy': { icon: 'snow', label: '눈' },
+  'snowy-rainy': { icon: 'snow', label: '진눈깨비' },
+  'hail': { icon: 'snow', label: '우박' },
+  'fog': { icon: 'fog', label: '안개' },
+  'windy': { icon: 'cloud', label: '바람' },
+  'windy-variant': { icon: 'cloud', label: '바람' },
+  'exceptional': { icon: 'cloud', label: '특보' },
 }

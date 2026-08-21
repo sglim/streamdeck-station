@@ -44,6 +44,8 @@ export interface Config {
     favorites?: EntityButton[]
     /** 홈의 "모두 끄기" 버튼이 실행할 씬 */
     allOffScene?: string
+    /** 홈 날씨 버튼이 볼 weather 엔티티 */
+    weather?: string
   }
   bots: BotButton[]
   /** 서버 페이지에 보여줄 컨테이너 이름 */

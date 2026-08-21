@@ -8,6 +8,8 @@ import { emptyLayout, homeButton, type AppContext } from './context.js'
 
 const CONTAINER_SLOTS = 5
 const CONFIRM_TIMEOUT_MS = 4000
+/** 밝기 버튼을 누를 때마다 순환하는 단계 */
+const BRIGHTNESS_STEPS = [100, 60, 30, 10]
 
 /** 서버 상태: 부하·메모리·디스크·업타임 + 컨테이너 상태/재시작 */
 export class ServerPage implements Page {
@@ -20,8 +22,12 @@ export class ServerPage implements Page {
   private confirming: string | null = null
   private confirmTimer: NodeJS.Timeout | null = null
   private busy = new Set<string>()
+  private brightnessStep: number
 
-  constructor(private readonly ctx: AppContext) {}
+  constructor(private readonly ctx: AppContext) {
+    const idx = BRIGHTNESS_STEPS.indexOf(ctx.config.brightness)
+    this.brightnessStep = idx >= 0 ? idx : 0
+  }
 
   async onEnter(): Promise<void> {
     await this.poll()
@@ -92,12 +98,22 @@ export class ServerPage implements Page {
       }
     })
 
+    layout[10] = {
+      value: `${BRIGHTNESS_STEPS[this.brightnessStep]}%`,
+      label: '밝기',
+      gauge: BRIGHTNESS_STEPS[this.brightnessStep]! / 100,
+      accent: COLORS.muted,
+    }
     layout[14] = homeButton()
     return layout
   }
 
   async onPress(index: number): Promise<void> {
     if (index === 14) return this.ctx.station.goHome()
+    if (index === 10) {
+      this.brightnessStep = (this.brightnessStep + 1) % BRIGHTNESS_STEPS.length
+      return this.ctx.station.setBrightness(BRIGHTNESS_STEPS[this.brightnessStep]!)
+    }
 
     const c = this.containers[index - 5]
     if (index < 5 || index > 9 || !c || this.busy.has(c.name)) return
