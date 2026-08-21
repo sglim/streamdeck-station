@@ -1,7 +1,7 @@
 import type { Page, Layout } from '../deck/station.js'
-import { COLORS, type IconName } from '../deck/render.js'
+import { COLORS, type ButtonSpec, type IconName } from '../deck/render.js'
 import { readSystemStats, readContainers } from '../integrations/system.js'
-import { emptyLayout, navButton, type AppContext } from './context.js'
+import { emptyLayout, navButton, resolveTrack, type AppContext } from './context.js'
 
 /** 밝기 버튼을 누를 때마다 순환하는 단계 */
 const BRIGHTNESS_STEPS = [100, 60, 30, 10]
@@ -39,7 +39,7 @@ export class HomePage implements Page {
   async render(): Promise<Layout> {
     const layout = emptyLayout()
 
-    layout[0] = navButton('음악', 'radio', COLORS.purple)
+    layout[0] = await this.musicButton()
     layout[1] = navButton('조명', 'bulb', COLORS.amber)
     layout[2] = navButton('씬', 'scene', COLORS.cyan)
     layout[3] = navButton('봇', 'bot', COLORS.green)
@@ -79,6 +79,29 @@ export class HomePage implements Page {
     }
 
     return layout
+  }
+
+  /**
+   * 음악 페이지로 가는 버튼. 어딘가에서 재생 중이면 버튼 자리에 곡명을 보여준다.
+   * 눌렀을 때 음악 페이지로 가는 동작은 재생 여부와 상관없이 같다.
+   */
+  private async musicButton(): Promise<ButtonSpec> {
+    const players = this.ctx.config.hass.players ?? []
+    if (players.length === 0 || !this.ctx.hass.enabled) {
+      return navButton('음악', 'radio', COLORS.purple)
+    }
+
+    const states = await this.ctx.hass.getStates()
+    // 그룹이 목록 앞에 있으므로 먼저 재생 중인 것을 찾으면 그게 대표가 된다
+    for (const p of players) {
+      const state = states.get(p.entity)
+      if (state?.state !== 'playing') continue
+      const { title, artist } = resolveTrack(state)
+      return title
+        ? { label: title, sub: artist, accent: COLORS.purple }
+        : { icon: 'radio', label: '재생 중', accent: COLORS.purple, bg: COLORS.bgAlt }
+    }
+    return navButton('음악', 'radio', COLORS.purple)
   }
 
   private async readSummary(): Promise<void> {

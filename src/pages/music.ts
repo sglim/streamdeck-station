@@ -1,8 +1,7 @@
 import type { Page, Layout } from '../deck/station.js'
 import { COLORS, type ButtonSpec } from '../deck/render.js'
 import type { HassState } from '../integrations/hass.js'
-import { peekNowPlaying, refreshNowPlaying, type NowPlaying } from '../integrations/icy.js'
-import { emptyLayout, homeButton, type AppContext } from './context.js'
+import { emptyLayout, homeButton, resolveTrack, type AppContext } from './context.js'
 
 const VOLUME_STEP = 0.05
 const RADIO_SLOTS = 5
@@ -73,7 +72,7 @@ export class MusicPage implements Page {
       accent: COLORS.cyan,
     }
     layout[11] = { icon: 'stop', label: '정지', dim: !available }
-    layout[12] = nowPlaying(state, this.icyFor(state))
+    layout[12] = nowPlaying(state)
     layout[13] = {
       value: `${Math.round(volume * 100)}%`,
       label: '볼륨',
@@ -111,19 +110,6 @@ export class MusicPage implements Page {
     }
   }
 
-  /**
-   * 지금 재생 중인 스트림의 곡 정보를 캐시에서 꺼낸다.
-   * Cast 리시버가 곡 정보를 넘겨주지 않아 스트림에서 직접 읽는데,
-   * 렌더를 막지 않도록 갱신은 백그라운드로 돌리고 여기서는 캐시만 본다.
-   */
-  private icyFor(state: HassState | undefined): NowPlaying | null {
-    if (state?.state !== 'playing') return null
-    const url = state.attributes.media_content_id as string | undefined
-    if (!url?.startsWith('http')) return null
-    refreshNowPlaying(url)
-    return peekNowPlaying(url)
-  }
-
   private async nudgeVolume(entity: string, delta: number): Promise<void> {
     const state = await this.ctx.hass.get(entity, 500)
     const current = typeof state?.attributes.volume_level === 'number'
@@ -133,17 +119,12 @@ export class MusicPage implements Page {
   }
 }
 
-/**
- * 현재 재생 중인 곡을 한 칸에 담는다.
- * HA가 주는 메타데이터를 먼저 쓰고, 비어 있으면 스트림에서 읽은 ICY 정보를 쓴다.
- */
-function nowPlaying(state: HassState | undefined, icy: NowPlaying | null): ButtonSpec {
+/** 현재 재생 중인 곡을 한 칸에 담는다 */
+function nowPlaying(state: HassState | undefined): ButtonSpec {
   if (!state || state.state === 'unavailable' || state.state === 'off') {
     return { icon: 'speaker', label: '꺼짐', dim: true }
   }
-  const title = (state.attributes.media_title as string | undefined) ?? icy?.title
-  const artist = (state.attributes.media_artist ?? state.attributes.media_channel) as string | undefined
-    ?? icy?.artist
+  const { title, artist } = resolveTrack(state)
   if (!title) {
     return { icon: 'speaker', label: state.state === 'playing' ? '재생 중' : '대기', dim: true }
   }
