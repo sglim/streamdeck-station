@@ -19,11 +19,12 @@ const ctx: AppContext = { station, hass, config }
 
 const stub = (): Page => ({ id: 'stub', render: () => [] })
 const pages: Record<string, Page> = {
-  home: new HomePage(ctx, { music: stub, lights: stub, scenes: stub, bots: stub, server: stub }),
+  home: new HomePage(ctx, { music: stub, lights: stub, scenes: stub, bots: stub, server: stub, appliances: stub }),
   music: new MusicPage(ctx),
   lights: new EntityPage('lights', ctx,
     [...(config.hass.lights ?? []), ...(config.hass.switches ?? [])], 'toggle', COLORS.amber),
   scenes: new EntityPage('scenes', ctx, config.hass.scenes ?? [], 'scene', COLORS.cyan),
+  appliances: new EntityPage('appliances', ctx, config.hass.appliances ?? [], 'toggle', COLORS.green),
   bots: new BotsPage(ctx),
   server: new ServerPage(ctx),
 }

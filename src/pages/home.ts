@@ -9,6 +9,7 @@ export interface HomeTargets {
   scenes: () => Page
   bots: () => Page
   server: () => Page
+  appliances: () => Page
 }
 
 /** 루트 화면: 페이지 이동 + 즐겨찾기 씬 + 서버 상태 요약 */
@@ -25,7 +26,8 @@ export class HomePage implements Page {
   ) {}
 
   private get favorites() {
-    return this.ctx.config.hass.favorites?.slice(0, 5) ?? []
+    // 9번 칸은 가전 페이지 진입 버튼이 쓰므로 즐겨찾기는 4개까지만
+    return this.ctx.config.hass.favorites?.slice(0, 4) ?? []
   }
 
   async render(): Promise<Layout> {
@@ -43,6 +45,8 @@ export class HomePage implements Page {
         ? { icon: 'check', label: fav.label, fg: COLORS.green, accent: COLORS.green, bg: '#16261a' }
         : { icon: (fav.icon as IconName) ?? 'scene', label: fav.label, accent: COLORS.cyan }
     })
+
+    layout[9] = navButton('가전', 'fan', COLORS.green)
 
     await this.readSummary()
     layout[10] = { label: '모두 끄기', accent: COLORS.red, fg: COLORS.red, bg: '#241416' }
@@ -109,11 +113,12 @@ export class HomePage implements Page {
       case 2: return station.push(this.targets.scenes())
       case 3: return station.push(this.targets.bots())
       case 4: return station.push(this.targets.server())
+      case 9: return station.push(this.targets.appliances())
       case 10: return this.allOff()
     }
 
     const fav = this.favorites[index - 5]
-    if (fav && index >= 5 && index <= 9) {
+    if (fav && index >= 5 && index <= 8) {
       if (fav.entity.startsWith('scene.')) await this.ctx.hass.activateScene(fav.entity)
       else await this.ctx.hass.toggle(fav.entity)
       this.flash(fav.entity)

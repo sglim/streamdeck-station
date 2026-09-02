@@ -39,6 +39,9 @@ const home = new HomePage(ctx, {
   )),
   bots: once('bots', () => new BotsPage(ctx)),
   server: once('server', () => new ServerPage(ctx)),
+  appliances: once('appliances', () => new EntityPage(
+    'appliances', ctx, config.hass.appliances ?? [], 'toggle', COLORS.green,
+  )),
 })
 
 if (!hass.enabled) {

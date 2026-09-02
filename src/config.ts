@@ -46,6 +46,8 @@ export interface Config {
     allOffScene?: string
     /** 홈 날씨 버튼이 볼 weather 엔티티 */
     weather?: string
+    /** 가전 페이지 (에어컨·월패드 전등 등 토글) */
+    appliances?: EntityButton[]
   }
   bots: BotButton[]
   /** 서버 페이지에 보여줄 컨테이너 이름 */
