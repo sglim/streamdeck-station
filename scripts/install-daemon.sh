@@ -3,7 +3,7 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-LABEL="com.dennis.streamdeck-station"
+LABEL="${STREAMDECK_LABEL:-local.streamdeck-station}"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 NODE="$(command -v node)"
 LOG_DIR="$HOME/Library/Logs"

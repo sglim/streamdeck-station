@@ -1,0 +1,38 @@
+{
+  "brightness": 80,
+  "hass": {
+    "url": "http://localhost:8123",
+    "allOffScene": "scene.all_lights_off",
+    "defaultPlayer": "media_player.speaker_group",
+    "players": [
+      { "label": "전체", "entity": "media_player.speaker_group" },
+      { "label": "거실", "entity": "media_player.living_room_speaker" }
+    ],
+    "radio": [
+      { "label": "K-pop", "sub": "Kpophits", "url": "https://kpophits.stream.laut.fm/kpophits" },
+      { "label": "Pop 100", "sub": ".977 Hitz", "url": "http://18863.live.streamtheworld.com/977_HITS_SC" },
+      { "label": "클래식", "sub": "명곡 100", "url": "https://az1.mediacp.eu/listen/100greatestclassicalmusic/radio.mp3" }
+    ],
+    "favorites": [
+      { "label": "거실등", "entity": "scene.living_room_lights", "icon": "bulb" },
+      { "label": "침실등", "entity": "scene.bedroom_lights", "icon": "bulb" }
+    ],
+    "lights": [
+      { "label": "거실등", "entity": "light.living_room" }
+    ],
+    "switches": [
+      { "label": "무드등", "entity": "switch.mood_lamp" }
+    ],
+    "scenes": [
+      { "label": "모두 끄기", "entity": "scene.all_lights_off", "icon": "power" }
+    ],
+    "appliances": [
+      { "label": "거실 에어컨", "entity": "switch.living_room_ac", "icon": "fan" }
+    ],
+    "weather": "weather.forecast_home"
+  },
+  "bots": [
+    { "label": "백업", "job": "com.example.backup-job" }
+  ],
+  "containers": ["homeassistant", "postgres", "mosquitto"]
+}

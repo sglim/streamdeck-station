@@ -25,7 +25,7 @@ Elgato의 Stream Deck 데스크톱 앱은 **쓰지 않습니다**. Node가 USB H
 - **장치 제어**: `@elgato-stream-deck/node` v7 — `deck.CONTROLS` 배열 기반 API
 - **버튼 렌더링**: `sharp`로 SVG → raw RGBA. `fillKeyBuffer`는 PNG가 아닌 **raw 픽셀**만 받습니다
 - **빌드**: `tsc` 하나 (번들러 없음)
-- **자동 시작**: launchd LaunchAgent (`com.dennis.streamdeck-station`)
+- **자동 시작**: launchd LaunchAgent (`local.streamdeck-station`)
 
 ## 명령
 
@@ -36,7 +36,7 @@ node dist/main.js                   # 직접 실행 (디버깅용)
 bash scripts/install-daemon.sh      # LaunchAgent 등록 + 시작
 node dist/dev/preview-all.js /tmp   # 모든 페이지를 PNG로 렌더 (하드웨어 없이 디자인 확인)
 
-launchctl kickstart -k gui/501/com.dennis.streamdeck-station   # 재시작
+launchctl kickstart -k gui/$UID/local.streamdeck-station       # 재시작
 tail -f ~/Library/Logs/streamdeck-station.log                  # 로그
 ```
 
@@ -68,7 +68,8 @@ src/
     preview-all.ts        전체 페이지 미리보기 생성
 
 config/
-  config.json             버튼 구성 (엔티티 ID, 봇 목록, 컨테이너) — git 추적
+  config.example.json     버튼 구성 예시 — git 추적
+  config.json             실제 구성 (엔티티 ID, 봇 목록) — gitignore
   local.json              HA 토큰 등 비밀 — gitignore
 ```
 
@@ -82,13 +83,12 @@ config/
   찾지 못합니다. 새 외부 명령을 쓸 때 이 점을 확인하세요.
 - 라벨은 폭 기준으로 자동 축소·줄바꿈됩니다. 글자 수로 자르지 마세요 (한글은 영문의 약 2배 폭).
 
-## 연동 대상 (이 맥의 실제 구성)
+## 연동 대상
 
-- **Home Assistant**: Docker 컨테이너, `localhost:8123`, 설정은 `~/repos/iot/stack/homeassistant`
-  - SmartThings 통합으로 조명 6 / 스위치 17 / 씬 13 / 커튼 1
-  - 음악은 Google Cast 통합의 `media_player` 엔티티를 씁니다 (Google Home Mini)
-- **자동화 봇**: `ai.everystat.*`, `com.dennis.venture-*` LaunchAgent 40여 개
-- **컨테이너**: homeassistant, postgres, mosquitto (colima 위 docker)
+- **Home Assistant**: REST API (`hass.url` 설정). 조명·스위치·씬·media_player 를 씁니다
+  - 음악은 Google Cast 통합의 `media_player` 엔티티가 있어야 동작합니다 (예: Google Home Mini)
+- **자동화 봇**: 사용자 LaunchAgent — `config.json` 의 `bots` 목록
+- **컨테이너**: `config.json` 의 `containers` 목록 (docker CLI 로 조회)
 
 ## 주요 참조
 
