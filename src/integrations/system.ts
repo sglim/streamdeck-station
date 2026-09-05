@@ -95,30 +95,95 @@ export async function restartContainer(name: string): Promise<void> {
   await run('docker', ['restart', name], 60000)
 }
 
-let tempCache: { value: number | null; at: number } = { value: null, at: 0 }
-let tempInflight = false
-const TEMP_TTL_MS = 10_000
+export interface MacmonStats {
+  cpuTempC: number
+  gpuTempC: number
+  cpuPowerW: number
+  gpuPowerW: number
+  anePowerW: number
+  sysPowerW: number
+  /** 사용률 0~1 */
+  ecpuPct: number
+  ecpuMhz: number
+  pcpuPct: number
+  pcpuMhz: number
+  gpuPct: number
+  fanRpm: number
+  fanMaxRpm: number
+}
+
+let macmonCache: { value: MacmonStats | null; at: number } = { value: null, at: 0 }
+let macmonInflight = false
+const MACMON_TTL_MS = 5_000
 
 /**
- * CPU 온도(°C). Apple Silicon 은 표준 명령이 없어 macmon 으로 읽는다.
- * 샘플링에 1초쯤 걸리므로 렌더를 막지 않도록 백그라운드로 갱신하고
- * 캐시를 돌려준다. macmon 이 없거나 실패하면 null.
+ * macmon 하드웨어 지표 (Apple Silicon 은 온도·코어별 사용률을 주는 표준
+ * 명령이 없다). 샘플링에 1초쯤 걸리므로 렌더를 막지 않도록 백그라운드로
+ * 갱신하고 캐시를 돌려준다. macmon 이 없거나 실패하면 null.
  */
-export function readCpuTemp(): number | null {
-  if (Date.now() - tempCache.at > TEMP_TTL_MS && !tempInflight) {
-    tempInflight = true
+export function readMacmon(): MacmonStats | null {
+  if (Date.now() - macmonCache.at > MACMON_TTL_MS && !macmonInflight) {
+    macmonInflight = true
     void tryRun('macmon', ['pipe', '-s', '1'], 8000)
       .then((out) => {
-        let value: number | null = null
+        let value: MacmonStats | null = null
         try {
-          const t = out ? JSON.parse(out.trim().split('\n')[0]!)?.temp?.cpu_temp_avg : null
-          if (typeof t === 'number' && t > 0) value = t
+          const d = out ? JSON.parse(out.trim().split('\n')[0]!) : null
+          if (d?.temp) {
+            const n = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
+            value = {
+              cpuTempC: n(d.temp.cpu_temp_avg),
+              gpuTempC: n(d.temp.gpu_temp_avg),
+              cpuPowerW: n(d.cpu_power),
+              gpuPowerW: n(d.gpu_power),
+              anePowerW: n(d.ane_power),
+              sysPowerW: n(d.sys_power),
+              ecpuMhz: n(d.ecpu_usage?.[0]),
+              ecpuPct: n(d.ecpu_usage?.[1]),
+              pcpuMhz: n(d.pcpu_usage?.[0]),
+              pcpuPct: n(d.pcpu_usage?.[1]),
+              gpuPct: n(d.gpu_usage?.[1]),
+              fanRpm: n(d.fans?.[0]?.rpm),
+              fanMaxRpm: n(d.fans?.[0]?.max_rpm),
+            }
+          }
         } catch { /* 출력 형식이 바뀐 경우 */ }
-        tempCache = { value, at: Date.now() }
+        macmonCache = { value, at: Date.now() }
       })
-      .finally(() => { tempInflight = false })
+      .finally(() => { macmonInflight = false })
   }
-  return tempCache.value
+  return macmonCache.value
+}
+
+/** CPU 온도(°C). macmon 캐시에서 꺼낸다. */
+export function readCpuTemp(): number | null {
+  const t = readMacmon()?.cpuTempC
+  return t !== undefined && t > 0 ? t : null
+}
+
+export interface BatteryInfo {
+  percent: number
+  charging: boolean
+  tempC: number
+  cycles: number
+}
+
+/** 배터리 상태 (ioreg AppleSmartBattery) */
+export async function readBattery(): Promise<BatteryInfo | null> {
+  const out = await tryRun('ioreg', ['-rn', 'AppleSmartBattery'], 4000)
+  if (!out) return null
+  const num = (key: string): number | null => {
+    const m = out.match(new RegExp(`"${key}" = (-?\\d+)`))
+    return m ? Number(m[1]) : null
+  }
+  const percent = num('CurrentCapacity')
+  if (percent === null) return null
+  return {
+    percent,
+    charging: /"IsCharging" = Yes/.test(out),
+    tempC: (num('Temperature') ?? 0) / 100,
+    cycles: num('CycleCount') ?? 0,
+  }
 }
 
 /** 초를 "3일 4시간" 같은 짧은 한글 표기로 */

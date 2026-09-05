@@ -8,6 +8,7 @@ import { MusicPage } from '../pages/music.js'
 import { EntityPage } from '../pages/entities.js'
 import { BotsPage } from '../pages/bots.js'
 import { ServerPage } from '../pages/server.js'
+import { StatsPage } from '../pages/stats.js'
 import type { AppContext } from '../pages/context.js'
 import { savePreview } from './preview.js'
 
@@ -19,7 +20,7 @@ const ctx: AppContext = { station, hass, config }
 
 const stub = (): Page => ({ id: 'stub', render: () => [] })
 const pages: Record<string, Page> = {
-  home: new HomePage(ctx, { music: stub, lights: stub, scenes: stub, bots: stub, server: stub, appliances: stub }),
+  home: new HomePage(ctx, { music: stub, lights: stub, scenes: stub, bots: stub, server: stub, appliances: stub, stats: stub }),
   music: new MusicPage(ctx),
   lights: new EntityPage('lights', ctx,
     [...(config.hass.lights ?? []), ...(config.hass.switches ?? [])], 'toggle', COLORS.amber),
@@ -27,6 +28,7 @@ const pages: Record<string, Page> = {
   appliances: new EntityPage('appliances', ctx, config.hass.appliances ?? [], 'toggle', COLORS.green),
   bots: new BotsPage(ctx),
   server: new ServerPage(ctx),
+  stats: new StatsPage(ctx),
 }
 
 for (const [name, page] of Object.entries(pages)) {

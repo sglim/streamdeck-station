@@ -10,6 +10,7 @@ export interface HomeTargets {
   bots: () => Page
   server: () => Page
   appliances: () => Page
+  stats: () => Page
 }
 
 /** 루트 화면: 페이지 이동 + 즐겨찾기 씬 + 서버 상태 요약 */
@@ -115,6 +116,7 @@ export class HomePage implements Page {
       case 4: return station.push(this.targets.server())
       case 9: return station.push(this.targets.appliances())
       case 10: return this.allOff()
+      case 11: return station.push(this.targets.stats())
     }
 
     const fav = this.favorites[index - 5]

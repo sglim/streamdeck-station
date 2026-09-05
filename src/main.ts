@@ -7,6 +7,7 @@ import { MusicPage } from './pages/music.js'
 import { EntityPage } from './pages/entities.js'
 import { BotsPage } from './pages/bots.js'
 import { ServerPage } from './pages/server.js'
+import { StatsPage } from './pages/stats.js'
 import type { AppContext } from './pages/context.js'
 import type { Page } from './deck/station.js'
 
@@ -38,7 +39,8 @@ const home = new HomePage(ctx, {
     'scenes', ctx, config.hass.scenes ?? [], 'scene', COLORS.cyan,
   )),
   bots: once('bots', () => new BotsPage(ctx)),
-  server: once('server', () => new ServerPage(ctx)),
+  server: once('server', () => new ServerPage(ctx, once('stats', () => new StatsPage(ctx)))),
+  stats: once('stats', () => new StatsPage(ctx)),
   appliances: once('appliances', () => new EntityPage(
     'appliances', ctx, config.hass.appliances ?? [], 'toggle', COLORS.green,
   )),

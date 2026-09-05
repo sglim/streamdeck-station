@@ -24,7 +24,10 @@ export class ServerPage implements Page {
   private busy = new Set<string>()
   private brightnessStep: number
 
-  constructor(private readonly ctx: AppContext) {
+  constructor(
+    private readonly ctx: AppContext,
+    private readonly openStats?: () => Page,
+  ) {
     const idx = BRIGHTNESS_STEPS.indexOf(ctx.config.brightness)
     this.brightnessStep = idx >= 0 ? idx : 0
   }
@@ -120,6 +123,7 @@ export class ServerPage implements Page {
 
   async onPress(index: number): Promise<void> {
     if (index === 14) return this.ctx.station.goHome()
+    if (index === 0 && this.openStats) return this.ctx.station.push(this.openStats())
     if (index === 10) {
       this.brightnessStep = (this.brightnessStep + 1) % BRIGHTNESS_STEPS.length
       return this.ctx.station.setBrightness(BRIGHTNESS_STEPS[this.brightnessStep]!)
