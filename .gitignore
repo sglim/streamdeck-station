@@ -4,3 +4,4 @@ config/config.json
 config/local.json
 .envrc
 *.log
+config/config.json.bak*
