@@ -4,7 +4,7 @@ import type { HassState } from '../integrations/hass.js'
 import { emptyLayout, homeButton, resolveTrack, type AppContext } from './context.js'
 
 const VOLUME_STEP = 0.05
-const RADIO_SLOTS = 5
+const RADIO_SLOTS = 6
 
 /** 음악 스테이션: HA media_player(구글 홈 미니 등)를 제어한다 */
 export class MusicPage implements Page {
@@ -48,11 +48,18 @@ export class MusicPage implements Page {
       ? (state.attributes.volume_level as number)
       : 0
 
-    layout[0] = { icon: 'prev', label: '이전', dim: !available }
+    // 캐스트 스피커는 이전/다음 트랙을 지원하지 않는다 (supported_features 에 16·32 없음,
+    // 호출하면 500). 그래서 그 자리를 스피커 선택·정지에 내주고 프리셋을 한 칸 늘렸다.
+    layout[0] = {
+      icon: 'speaker',
+      label: player.label,
+      sub: this.players.length > 1 ? `${this.playerIndex + 1}/${this.players.length}` : undefined,
+      accent: COLORS.cyan,
+    }
     layout[1] = playing
       ? { icon: 'pause', label: '일시정지', fg: COLORS.green, accent: COLORS.green }
       : { icon: 'play', label: '재생', fg: available ? COLORS.fg : COLORS.muted, dim: !available }
-    layout[2] = { icon: 'next', label: '다음', dim: !available }
+    layout[2] = { icon: 'stop', label: '정지', dim: !available }
     layout[3] = { icon: 'volDown', label: '볼륨 -', dim: !available }
     layout[4] = { icon: 'volUp', label: '볼륨 +', dim: !available }
 
@@ -65,13 +72,6 @@ export class MusicPage implements Page {
       }
     })
 
-    layout[10] = {
-      icon: 'speaker',
-      label: player.label,
-      sub: this.players.length > 1 ? `${this.playerIndex + 1}/${this.players.length}` : undefined,
-      accent: COLORS.cyan,
-    }
-    layout[11] = { icon: 'stop', label: '정지', dim: !available }
     layout[12] = nowPlaying(state)
     layout[13] = {
       value: `${Math.round(volume * 100)}%`,
@@ -92,20 +92,18 @@ export class MusicPage implements Page {
     const hass = this.ctx.hass
 
     switch (index) {
-      case 0: return hass.mediaCommand(entity, 'media_previous_track')
-      case 1: return hass.mediaCommand(entity, 'media_play_pause')
-      case 2: return hass.mediaCommand(entity, 'media_next_track')
-      case 3: return this.nudgeVolume(entity, -VOLUME_STEP)
-      case 4: return this.nudgeVolume(entity, +VOLUME_STEP)
-      case 10:
+      case 0:
         // 스피커 순환 선택
         this.playerIndex = (this.playerIndex + 1) % this.players.length
         return
-      case 11: return hass.mediaCommand(entity, 'media_stop')
+      case 1: return hass.mediaCommand(entity, 'media_play_pause')
+      case 2: return hass.mediaCommand(entity, 'media_stop')
+      case 3: return this.nudgeVolume(entity, -VOLUME_STEP)
+      case 4: return this.nudgeVolume(entity, +VOLUME_STEP)
     }
 
     const preset = this.ctx.config.hass.radio?.[index - 5]
-    if (preset && index >= 5 && index <= 9) {
+    if (preset && index >= 5 && index <= 10) {
       await hass.playUrl(entity, preset.url)
     }
   }
