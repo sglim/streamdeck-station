@@ -18,6 +18,11 @@ export interface RadioPreset {
   /** 스트리밍 URL 또는 HA media_content_id */
   url: string
   sub?: string
+  /**
+   * 길게 눌렀을 때 켤 «반복 재생» 스위치. 로컬 음악처럼 끝이 있는 곡에만 의미가 있다.
+   * 캐스트가 repeat_set 을 지원하지 않아 HA 쪽 자동화로 구현되어 있다.
+   */
+  repeatEntity?: string
 }
 
 export interface BotButton {

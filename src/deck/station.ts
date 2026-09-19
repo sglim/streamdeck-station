@@ -13,12 +13,20 @@ export function at(col: number, row: number): number {
   return row * COLS + col
 }
 
+/** 이 시간 이상 누르고 있으면 «길게 누르기» 로 본다 */
+const LONG_PRESS_MS = 600
+
 export interface Page {
   readonly id: string
   /** 현재 상태를 15칸 레이아웃으로 그린다 */
   render(): Promise<Layout> | Layout
   /** 버튼이 눌렸을 때. 반환값이 없으면 렌더는 자동 갱신된다 */
   onPress?(index: number): void | Promise<void>
+  /**
+   * 길게 눌렀을 때. 이 핸들러를 가진 페이지는 짧은 누름이 «손을 뗄 때» 실행된다
+   * (길게 누른 것인지 그때 알 수 있기 때문). 없으면 기존처럼 누르는 즉시 실행한다.
+   */
+  onLongPress?(index: number): void | Promise<void>
   /** 이 페이지가 떠 있는 동안 자동 갱신 주기(ms). 없으면 갱신 안 함 */
   readonly refreshMs?: number
   onEnter?(): void | Promise<void>
@@ -31,6 +39,10 @@ export class Station {
   private lastDrawn = new Map<number, string>()
   /** 마지막으로 그린 스펙. 버튼을 누른 즉시 로딩 표시를 겹쳐 그리는 데 쓴다. */
   private lastSpec = new Map<number, ButtonSpec | null>()
+  /** 길게 누르기 판정용 타이머 (키를 누르고 있는 동안) */
+  private holdTimers = new Map<number, NodeJS.Timeout>()
+  /** 이미 길게 누르기로 처리된 키 — 손을 뗄 때 짧은 누름이 또 실행되지 않게 한다 */
+  private longFired = new Set<number>()
   private refreshTimer: NodeJS.Timeout | null = null
   private renderPending = false
   private rendering = false
@@ -60,6 +72,7 @@ export class Station {
         this.deck = deck
         await deck.setBrightness(this.brightness)
         deck.on('down', (c) => { void this.handleDown(c.index) })
+        deck.on('up', (c) => { void this.handleUp(c.index) })
         deck.on('error', (err) => {
           console.error('[deck] 오류:', err)
           void this.reconnect()
@@ -86,14 +99,56 @@ export class Station {
   private async handleDown(index: number): Promise<void> {
     const page = this.current
     if (!page) return
-    // 눌린 즉시 현재 버튼 위에 로딩 표시를 겹쳐 그린 뒤 핸들러를 실행한다.
-    // HA 같은 클라우드 왕복이 있는 동작은 수백 ms가 걸려, 아무 표시가 없으면
-    // 흰 화면처럼 보이는 렌더 지연과 헷갈린다.
-    void this.paintBusy(index)
+
+    // 길게 누르기를 쓰지 않는 페이지는 기존대로 누르는 즉시 실행한다
+    if (!page.onLongPress) {
+      void this.paintBusy(index)
+      await this.firePress(index)
+      return
+    }
+
+    // 길게 누르기 페이지: 임계 시간이 지나면 그 자리에서 길게 누르기로 처리하고,
+    // 그 전에 손을 떼면 handleUp 이 짧은 누름으로 처리한다.
+    const timer = setTimeout(() => {
+      this.holdTimers.delete(index)
+      this.longFired.add(index)
+      void this.paintBusy(index)
+      void this.fireLongPress(index)
+    }, LONG_PRESS_MS)
+    timer.unref()
+    this.holdTimers.set(index, timer)
+  }
+
+  private async handleUp(index: number): Promise<void> {
+    const timer = this.holdTimers.get(index)
+    if (timer) {
+      clearTimeout(timer)
+      this.holdTimers.delete(index)
+      // 임계 시간 전에 뗐으므로 짧은 누름이다
+      void this.paintBusy(index)
+      await this.firePress(index)
+    }
+    this.longFired.delete(index)
+  }
+
+  private async firePress(index: number): Promise<void> {
+    const page = this.current
+    if (!page) return
     try {
       await page.onPress?.(index)
     } catch (err) {
       console.error(`[${page.id}] 버튼 ${index} 처리 실패:`, (err as Error).message)
+    }
+    this.requestDraw()
+  }
+
+  private async fireLongPress(index: number): Promise<void> {
+    const page = this.current
+    if (!page) return
+    try {
+      await page.onLongPress?.(index)
+    } catch (err) {
+      console.error(`[${page.id}] 버튼 ${index} 길게 누르기 실패:`, (err as Error).message)
     }
     this.requestDraw()
   }
@@ -113,8 +168,16 @@ export class Station {
     } catch { /* 렌더 중 장치가 빠진 경우 */ }
   }
 
+  /** 눌린 채로 페이지가 바뀌면 타이머가 남아 엉뚱한 페이지에서 실행될 수 있다 */
+  private clearHolds(): void {
+    for (const t of this.holdTimers.values()) clearTimeout(t)
+    this.holdTimers.clear()
+    this.longFired.clear()
+  }
+
   /** 페이지를 새로 쌓는다 */
   async push(page: Page): Promise<void> {
+    this.clearHolds()
     await this.current?.onExit?.()
     this.stack.push(page)
     await page.onEnter?.()
@@ -124,6 +187,7 @@ export class Station {
 
   /** 이전 페이지로 돌아간다 (루트에서는 무시) */
   async pop(): Promise<void> {
+    this.clearHolds()
     if (this.stack.length <= 1) return
     await this.stack.pop()!.onExit?.()
     await this.current?.onEnter?.()
@@ -132,6 +196,7 @@ export class Station {
   }
 
   async goHome(): Promise<void> {
+    this.clearHolds()
     while (this.stack.length > 1) {
       await this.stack.pop()!.onExit?.()
     }

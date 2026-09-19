@@ -63,13 +63,28 @@ export class MusicPage implements Page {
     layout[3] = { icon: 'volDown', label: '볼륨 -', dim: !available }
     layout[4] = { icon: 'volUp', label: '볼륨 +', dim: !available }
 
+    const states = await this.ctx.hass.getStates()
     this.ctx.config.hass.radio?.slice(0, RADIO_SLOTS).forEach((preset, i) => {
-      layout[5 + i] = {
-        icon: 'radio',
-        label: preset.label,
-        sub: preset.sub,
-        accent: COLORS.purple,
-      }
+      // 반복 스위치가 켜져 있으면 «반복 중» 으로 표시한다
+      const repeating = preset.repeatEntity
+        ? states.get(preset.repeatEntity)?.state === 'on'
+        : false
+      layout[5 + i] = repeating
+        ? {
+            icon: 'refresh',
+            label: preset.label,
+            sub: '반복 중',
+            fg: COLORS.green,
+            accent: COLORS.green,
+            bg: '#16261a',
+          }
+        : {
+            icon: 'radio',
+            label: preset.label,
+            // 길게 누르면 반복되는 프리셋은 그걸 알려준다
+            sub: preset.repeatEntity ? '길게=반복' : preset.sub,
+            accent: COLORS.purple,
+          }
     })
 
     layout[12] = nowPlaying(state)
@@ -106,6 +121,20 @@ export class MusicPage implements Page {
     if (preset && index >= 5 && index <= 10) {
       await hass.playUrl(entity, preset.url)
     }
+  }
+
+  /**
+   * 프리셋을 길게 누르면 반복 재생을 켠다 (repeatEntity 가 있는 프리셋만).
+   * 이미 반복 중이면 끈다.
+   */
+  async onLongPress(index: number): Promise<void> {
+    const preset = this.ctx.config.hass.radio?.[index - 5]
+    if (!preset?.repeatEntity || index < 5 || index > 10) return
+
+    const on = (await this.ctx.hass.get(preset.repeatEntity))?.state === 'on'
+    await this.ctx.hass.call('switch', on ? 'turn_off' : 'turn_on', {
+      entity_id: preset.repeatEntity,
+    })
   }
 
   private async nudgeVolume(entity: string, delta: number): Promise<void> {
