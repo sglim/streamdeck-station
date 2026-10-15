@@ -172,6 +172,8 @@ export interface BatteryInfo {
 export async function readBattery(): Promise<BatteryInfo | null> {
   const out = await tryRun('ioreg', ['-rn', 'AppleSmartBattery'], 4000)
   if (!out) return null
+  // 데스크톱(맥 스튜디오 등)도 AppleSmartBattery 노드는 있고 용량이 0 으로 나온다 — 그대로 두면 「배터리 0%」 칸이 뜬다
+  if (/"BatteryInstalled" = No/.test(out)) return null
   const num = (key: string): number | null => {
     const m = out.match(new RegExp(`"${key}" = (-?\\d+)`))
     return m ? Number(m[1]) : null
