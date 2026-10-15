@@ -77,10 +77,18 @@ export interface Container {
   status: string
 }
 
+/** docker 데몬이 없는 맥(컨테이너가 다른 맥에 있음)에서 갱신마다 실패·로그가 쌓이지 않게, 실패하면 잠시 쉰다 */
+const DOCKER_RETRY_MS = 5 * 60_000
+let dockerDownUntil = 0
+
 /** colima/docker 컨테이너 목록. docker가 없거나 죽어 있으면 빈 배열. */
 export async function readContainers(): Promise<Container[]> {
+  if (Date.now() < dockerDownUntil) return []
   const out = await tryRun('docker', ['ps', '-a', '--format', '{{.Names}}\t{{.State}}\t{{.Status}}'], 8000)
-  if (!out) return []
+  if (!out) {
+    dockerDownUntil = Date.now() + DOCKER_RETRY_MS
+    return []
+  }
   return out
     .trim()
     .split('\n')
