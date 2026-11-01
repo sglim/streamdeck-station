@@ -4,7 +4,7 @@ import type { HassState } from '../integrations/hass.js'
 import { emptyLayout, homeButton, resolveTrack, type AppContext } from './context.js'
 
 const VOLUME_STEP = 0.05
-const RADIO_SLOTS = 6
+const RADIO_SLOTS = 7
 
 /** 음악 스테이션: HA media_player(구글 홈 미니 등)를 제어한다 */
 export class MusicPage implements Page {
@@ -118,7 +118,7 @@ export class MusicPage implements Page {
     }
 
     const preset = this.ctx.config.hass.radio?.[index - 5]
-    if (preset && index >= 5 && index <= 10) {
+    if (preset && index >= 5 && index < 5 + RADIO_SLOTS) {
       await hass.playUrl(entity, preset.url)
     }
   }
@@ -129,7 +129,7 @@ export class MusicPage implements Page {
    */
   async onLongPress(index: number): Promise<void> {
     const preset = this.ctx.config.hass.radio?.[index - 5]
-    if (!preset?.repeatEntity || index < 5 || index > 10) return
+    if (!preset?.repeatEntity || index < 5 || index >= 5 + RADIO_SLOTS) return
 
     const on = (await this.ctx.hass.get(preset.repeatEntity))?.state === 'on'
     await this.ctx.hass.call('switch', on ? 'turn_off' : 'turn_on', {
